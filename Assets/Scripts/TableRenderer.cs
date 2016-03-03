@@ -1,7 +1,6 @@
-﻿using UnityEngine;
-using System.Collections;
+﻿using System.Collections.Generic;
+using UnityEngine;
 using UnityEngine.UI;
-using System.Collections.Generic;
 
 public class TableRenderer : MonoBehaviour 
 {
@@ -39,14 +38,14 @@ public class TableRenderer : MonoBehaviour
     private List<List<GameObject>> itemLineList = null;
     //一行的数量或者一列的数量
     private int lineItemCount = 0;
-    //多少行或者多少列
-    private int lineCount = 0;
     //可显示的行数
     private int showLineCount = 0;
     //当前第一个item的索引
     private int curLineIndex = 0;
-    //总的数据数量
+    //总的多少行或者多少列
     private int totalLineCount;
+    //总的item数量
+    private int totalItemCount = 0;
     //底部位置
     private float bottom;
     //顶部位置
@@ -55,6 +54,10 @@ public class TableRenderer : MonoBehaviour
     private float left;
     //右边位置
     private float right;
+    //当前最后一行的索引
+    private int curLastLineIndex = -1;
+    //当前最后一行最后一个item位置的索引
+    private int curLastLineItemIndex = -1;
     public void init(bool isHorizontal = false,
                      int count = 0,
                      int lineItemCount = 0,
@@ -94,12 +97,7 @@ public class TableRenderer : MonoBehaviour
         this.contentStartPos = this.scroll.transform.localPosition;
         //一行或者一列的数量
         this.lineItemCount = lineItemCount;
-        //总的行数或者列数
-        this.lineCount = Mathf.CeilToInt((float)count / (float)lineItemCount);
-
         print("一排创建" + this.lineItemCount + "个");
-        print("一共" + this.lineCount + "行");
-
         this.reloadData(count);
         this.isReload = true;
     }
@@ -107,13 +105,27 @@ public class TableRenderer : MonoBehaviour
     /// <summary>
     /// 创建item
     /// </summary>
-    /// <param name="prefab">item的预设</param>
-    /// <returns></returns>
-    void createItem(GameObject prefab, int count)
+    /// <param name="prefab">需要创建item的预设</param>
+    /// <param name="createLineCount">创建的行(列)数</param>
+    /// <param name="count">需要创建item的个数</param>
+    void createItem(GameObject prefab, int createLineCount, int count)
     {
         if (this.itemLineList == null) this.itemLineList = new List<List<GameObject>>();
+        if (createLineCount < 0) return;
         if (count <= 0) return;
-        int lineShowCount = 0;
+        //表示相同一排内 删除或增加 item
+        int createCount = count - this.totalItemCount;
+        if (createCount <= 0) return;
+        //没有创建过
+        for (int i = 0; i < createLineCount; ++i)
+        {
+            this.itemLineList.Add(new List<GameObject>());
+        }
+        if(this.curLastLineIndex == -1)
+        {
+            
+        }
+        /*int lineShowCount = 0;
         int lineCount = 0;
         for (int i = 0; i < count; ++i)
         {
@@ -129,7 +141,7 @@ public class TableRenderer : MonoBehaviour
                 lineShowCount = 0;
                 lineCount++;
             }
-        }
+        }*/
     }
 
     /// <summary>
@@ -139,6 +151,7 @@ public class TableRenderer : MonoBehaviour
     void updateItem()
     {
         if (!this.isReload) return;
+        if (this.itemLineList == null) return;
         //坐标系 上正下负
         for (int i = 0; i < this.itemLineList.Count; ++i)
         {
@@ -192,7 +205,6 @@ public class TableRenderer : MonoBehaviour
                         this.itemLineList.RemoveAt(i);
                         List<GameObject> firstItemList = this.itemLineList[0];
                         GameObject firstItem = firstItemList[0];
-                        print("firstItem.transform.localPosition.y　" + firstItem.transform.localPosition.y);
                         for (int j = 0; j < itemListLength; j++)
                         {
                             //当前第i排的所有item
@@ -289,9 +301,9 @@ public class TableRenderer : MonoBehaviour
             }
         }
         //重新调用item回调
-
+        this.reloadItem();
+        this.fixItemPos();
     }
-
 
     /// <summary>
     /// 重新设置数据
@@ -301,41 +313,65 @@ public class TableRenderer : MonoBehaviour
     public void reloadData(int count)
     {
         this.isReload = false;
+        //保存上一次第一个item的位置
+        if (this.itemLineList != null &&
+            this.itemLineList.Count > 0)
+        {
+            List<GameObject> itemList = this.itemLineList[0];
+            GameObject item = itemList[0];
+            this.prevItemPos.x = item.transform.localPosition.x;
+            this.prevItemPos.y = item.transform.localPosition.y;
+        }
+        //判断 当前删除的index 是否在 this.curIndex , this.curIndex + this.showCount 之间。
+        //当前显示出来的最后一个item的index
+        int curLastLineIndex = this.curLineIndex + this.showLineCount - 1;
+        //总的最大index
+        //总的行数或者列数
+        int lastLineIndex = Mathf.CeilToInt((float)count / (float)lineItemCount) - 1;
+        //防止当前显示的数量溢出
+        if (this.curLineIndex > 0 && curLastLineIndex > lastLineIndex)
+        {
+            //获取溢出数量
+            int overLineCount = curLastLineIndex - lastLineIndex;
+            this.curLineIndex -= overLineCount;
+            //补全位置
+            this.prevItemPos.y += (this.itemHeight + this.gapV) * overLineCount;
+            this.prevItemPos.x -= (this.itemWidth + this.gapH) * overLineCount;
+            //防止去除溢出后 索引为负数。
+            if (this.curLineIndex < 0) this.curLineIndex = 0;
+        }
+        //总的行数或者列数
+        this.totalLineCount = Mathf.CeilToInt((float)count / (float)lineItemCount);
         //保存上一次显示的数量
         int prevShowLineCount = this.showLineCount;
-        //判断当前多出来的数量，并删除。
-        this.removeOverItem(count);
+        //判断当前多出来的排，并删除。
+        this.removeOverItem(this.totalLineCount);
+
         if (!this.isHorizontal) //纵向
             this.showLineCount = (int)(Mathf.Ceil(this.listHeight / (this.itemHeight + this.gapV))); //计算应该显示的数量
         else
             this.showLineCount = (int)(Mathf.Ceil(this.listWidth / (this.itemWidth + this.gapH)));
         //需要创建的数量不大于实际数量
-        if (this.showLineCount >= count)
-            this.showLineCount = count; //取实际数据的数量
+        if (this.showLineCount > this.totalLineCount)
+            this.showLineCount = this.totalLineCount; //取实际数据的数量
         else
             this.showLineCount += 1; //取计算的数量 + 1
         //创建数量
         print("可显示的行数 " + this.showLineCount);
         int createLineCount = this.showLineCount - prevShowLineCount;
-        if (createLineCount < 0) createLineCount = 0;
-        int createCount = createLineCount * this.lineItemCount;
-        this.totalLineCount = count;
         print("需要创建的行数 " + createLineCount);
-        print("需要创建的item数量 " + createCount);
         //根据显示数量创建item
-        this.createItem(this.itemPrefab, createCount);
+        this.createItem(this.itemPrefab, createLineCount, count);
+        this.totalItemCount = count;
         this.updateBorder();
         if (!this.isHorizontal)
-        {
-            this.content.GetComponent<RectTransform>().sizeDelta = new Vector2(this.content.GetComponent<RectTransform>().sizeDelta.x,
-                                                                               this.totalLineCount * (this.itemHeight + this.gapV));
-        }
+            this.content.GetComponent<RectTransform>().sizeDelta = new Vector2(this.content.GetComponent<RectTransform>().sizeDelta.x, this.totalLineCount * (this.itemHeight + this.gapV));
         else
-        {
-            this.content.GetComponent<RectTransform>().sizeDelta = new Vector2(this.totalLineCount * (this.itemWidth + this.gapH),
-                                                                               this.content.GetComponent<RectTransform>().sizeDelta.y);
-        }
+            this.content.GetComponent<RectTransform>().sizeDelta = new Vector2(this.totalLineCount * (this.itemWidth + this.gapH), this.content.GetComponent<RectTransform>().sizeDelta.y);
         this.layoutItem();
+        //重新调用回调
+        this.reloadItem(true);
+        this.fixItemPos();
         this.isReload = true;
     }
 
@@ -361,7 +397,81 @@ public class TableRenderer : MonoBehaviour
                     item.transform.localPosition = new Vector3(this.prevItemPos.x + (this.itemWidth + this.gapH) * i, 
                                                                this.prevItemPos.y - (this.itemHeight + this.gapV) * j);
 			}
-            
+        }
+    }
+
+    /// <summary>
+    /// 重新调用item的回调
+    /// </summary>
+    /// <returns></returns>
+    private void reloadItem(bool isReload = false)
+    {
+        if (this.itemLineList.Count > 0)
+        {
+            int index = 0;
+            //print("范围:" + this.curIndex + "--------" + (this.curIndex + this.showCount));
+            for (int i = this.curLineIndex; i < this.curLineIndex + this.showLineCount; ++i)
+            {
+                if (this.itemLineList[index] != null)
+                {
+                    List<GameObject> itemList = this.itemLineList[index];
+                    int length = itemList.Count;
+                    for (int j = 0; j < length; j++)
+                    {
+                        GameObject item = itemList[j];
+                        if (this.m_updateItem != null)
+                            this.m_updateItem.Invoke(item, j, isReload);
+                    }
+                    index++;
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// 拖动时修正位置
+    /// </summary>
+    /// <returns></returns>
+    private void fixItemPos()
+    {
+        //拖动时修正位置
+        if (this.itemLineList.Count > 0)
+        {
+            List<GameObject> prevItemList = this.itemLineList[0];
+            if (this.curLineIndex == 0)
+            {
+                int length = prevItemList.Count;
+                for (int j = 0; j < length; j++)
+                {
+                    GameObject prevItem = prevItemList[j];
+                    if (!this.isHorizontal)
+                        prevItem.transform.localPosition = new Vector3(prevItem.transform.localPosition.x, 0);
+                    else
+                        prevItem.transform.localPosition = new Vector3(0, prevItem.transform.localPosition.y);
+                }
+            }
+            for (int i = 1; i < this.itemLineList.Count; ++i)
+            {
+                //上一排的第一个做为定位
+                GameObject prevItem = prevItemList[0];
+                List<GameObject> itemList = this.itemLineList[i];
+                int length = itemList.Count;
+                for (int j = 0; j < length; j++)
+                {
+                    GameObject item = itemList[j];
+                    if (!this.isHorizontal)
+                    {
+                        item.transform.localPosition = new Vector3(item.transform.localPosition.x,
+                                                                   prevItem.transform.localPosition.y - this.itemHeight - this.gapV);
+                    }
+                    else
+                    {
+                        item.transform.localPosition = new Vector3(prevItem.transform.localPosition.x + this.itemWidth + this.gapH,
+                                                                   item.transform.localPosition.y);
+                    }
+                }
+                prevItemList = this.itemLineList[i];
+            }
         }
     }
 
@@ -371,20 +481,20 @@ public class TableRenderer : MonoBehaviour
     }
 
     /// <summary>
-    /// 删除多余的item
+    /// 删除多余的一排item
     /// </summary>
     /// <param name="count">当前应该显示的数量</param>
     /// <returns></returns>
-    void removeOverItem(int count)
+    void removeOverItem(int totalLineCount)
     {
         if (this.itemLineList != null &&
             this.itemLineList.Count > 0)
         {
             //删除多余的item
-            if (count < this.showLineCount)
+            if (totalLineCount < this.showLineCount)
             {
                 //删除 this.showCount - count 个 item
-                for (int i = this.showLineCount - 1; i >= count; --i)
+                for (int i = this.showLineCount - 1; i >= totalLineCount; --i)
                 {
                     List<GameObject> itemList = this.itemLineList[i];
                     int length = itemList.Count;
@@ -400,6 +510,30 @@ public class TableRenderer : MonoBehaviour
                     this.itemLineList.RemoveAt(i);
                 }
             }
+        }
+        this.updateLastIndex();
+    }
+
+    /// <summary>
+    /// 更新最后位置的索引
+    /// </summary>
+    private void updateLastIndex()
+    {
+        if (this.itemLineList != null &&
+            this.itemLineList.Count > 0)
+        {
+            //设置最后一排和最后一排最后一位
+            this.curLastLineIndex = this.itemLineList.Count - 1;
+            if (this.itemLineList.Count > 0)
+            {
+                List<GameObject> itemList = this.itemLineList[this.itemLineList.Count - 1];
+                this.curLastLineItemIndex = itemList.Count - 1;
+            }
+        }
+        else
+        {
+            this.curLastLineIndex = -1;
+            this.curLastLineItemIndex = -1;
         }
     }
 

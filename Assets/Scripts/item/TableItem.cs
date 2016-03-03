@@ -3,7 +3,7 @@ using UnityEngine.UI;
 
 public class TableItem : MonoBehaviour 
 {
-    public int id;
+    public int index = -1;
     public Text txt;
 	// Use this for initialization
 	void Start () {
