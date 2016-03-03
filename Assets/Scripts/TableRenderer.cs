@@ -38,14 +38,20 @@ public class TableRenderer : MonoBehaviour
     private List<List<GameObject>> itemLineList = null;
     //一行的数量或者一列的数量
     private int lineItemCount = 0;
-    //可显示的行数
+    //当前显示的排数
     private int showLineCount = 0;
-    //当前第一个item的索引
+    //可显示的总排数
+    private int maxShowLineCount = 0;
+    //当前第一排的索引
     private int curLineIndex = 0;
     //总的多少行或者多少列
     private int totalLineCount;
-    //总的item数量
-    private int totalItemCount = 0;
+    //总的数据数量（虚拟数据 并非实际创建的item数量）
+    private int totalCount = 0;
+    //当前最后一行的索引
+    private int curLastLineIndex = -1;
+    //当前最后一行最后一个item位置的索引
+    private int curLastLineItemIndex = -1;
     //底部位置
     private float bottom;
     //顶部位置
@@ -54,10 +60,6 @@ public class TableRenderer : MonoBehaviour
     private float left;
     //右边位置
     private float right;
-    //当前最后一行的索引
-    private int curLastLineIndex = -1;
-    //当前最后一行最后一个item位置的索引
-    private int curLastLineItemIndex = -1;
     public void init(bool isHorizontal = false,
                      int count = 0,
                      int lineItemCount = 0,
@@ -114,34 +116,52 @@ public class TableRenderer : MonoBehaviour
         if (createLineCount < 0) return;
         if (count <= 0) return;
         //表示相同一排内 删除或增加 item
-        int createCount = count - this.totalItemCount;
+        int createCount = count - this.totalCount;
+        print("createCount" + createCount);
+        print("createLineCount" + createLineCount);
         if (createCount <= 0) return;
         //没有创建过
         for (int i = 0; i < createLineCount; ++i)
         {
             this.itemLineList.Add(new List<GameObject>());
         }
+        //如果没有创建过
         if(this.curLastLineIndex == -1)
         {
-            
+            this.curLastLineIndex = 0;
+            this.curLastLineItemIndex = 0;
         }
-        /*int lineShowCount = 0;
-        int lineCount = 0;
-        for (int i = 0; i < count; ++i)
+        int lastLineIndex = this.curLastLineIndex;
+        print("plastLineIndex" + lastLineIndex);
+        print("curLastLineItemIndex " + curLastLineItemIndex + " this.lineItemCount " + this.lineItemCount);
+        //如果最后一排未放满
+        if (this.curLastLineItemIndex == this.lineItemCount - 1)
+        {
+            //重新设置最后一排数据
+            lastLineIndex++;
+        }
+        print("lastLineIndex" + lastLineIndex);
+        print("this.itemLineList.Count " + this.itemLineList.Count);
+        int curCount = 0;
+        while (curCount < createCount)
         {
             GameObject item = MonoBehaviour.Instantiate(prefab, new Vector3(0, 0), new Quaternion()) as GameObject;
             item.transform.SetParent(this.content.gameObject.transform);
             item.transform.localScale = new Vector3(1, 1, 1);
-            if (lineShowCount == 0) this.itemLineList.Add(new List<GameObject>());
-            List<GameObject> itemList = this.itemLineList[lineCount];
+            List<GameObject> itemList = this.itemLineList[lastLineIndex];
             itemList.Add(item);
-            lineShowCount++;
-            if (lineShowCount >= this.lineItemCount)
+            this.curLastLineItemIndex++;
+            if (this.curLastLineItemIndex == this.lineItemCount - 1)
             {
-                lineShowCount = 0;
-                lineCount++;
+                this.curLastLineItemIndex = 0;
+                lastLineIndex++;
             }
-        }*/
+            curCount++;
+        }
+        this.curLastLineIndex = this.itemLineList.Count - 1;
+        print("curCount" + curCount);
+        print("当前最后一个item的索引" + this.curLastLineItemIndex);
+        print("当前最后一排的索引" + this.curLastLineIndex);
     }
 
     /// <summary>
@@ -351,8 +371,9 @@ public class TableRenderer : MonoBehaviour
             this.showLineCount = (int)(Mathf.Ceil(this.listHeight / (this.itemHeight + this.gapV))); //计算应该显示的数量
         else
             this.showLineCount = (int)(Mathf.Ceil(this.listWidth / (this.itemWidth + this.gapH)));
+        this.maxShowLineCount = this.showLineCount + 1;
         //需要创建的数量不大于实际数量
-        if (this.showLineCount > this.totalLineCount)
+        if (this.totalLineCount <= this.showLineCount)
             this.showLineCount = this.totalLineCount; //取实际数据的数量
         else
             this.showLineCount += 1; //取计算的数量 + 1
@@ -362,7 +383,7 @@ public class TableRenderer : MonoBehaviour
         print("需要创建的行数 " + createLineCount);
         //根据显示数量创建item
         this.createItem(this.itemPrefab, createLineCount, count);
-        this.totalItemCount = count;
+        this.totalCount = count;
         this.updateBorder();
         if (!this.isHorizontal)
             this.content.GetComponent<RectTransform>().sizeDelta = new Vector2(this.content.GetComponent<RectTransform>().sizeDelta.x, this.totalLineCount * (this.itemHeight + this.gapV));
