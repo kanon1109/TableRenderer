@@ -16,7 +16,7 @@ public class Test : MonoBehaviour
         this.btn.onClick.AddListener(btnHandler);
 
         this.datalist = new List<TestVo>();
-        for (int i = 0; i < 4; ++i)
+        for (int i = 0; i < 2; ++i)
         {
             TestVo tVo = new TestVo();
             tVo.name = "name" + i;
@@ -42,13 +42,13 @@ public class Test : MonoBehaviour
 
     private void addBtnHandler()
     {
-        TestVo tVo = new TestVo();
-        tVo.name = "name" + this.datalist.Count;
-        this.datalist.Add(tVo);
-
-        tVo = new TestVo();
-        tVo.name = "name" + this.datalist.Count;
-        this.datalist.Add(tVo);
+        for (int i = 0; i < 7; i++)
+        {
+            TestVo tVo = new TestVo();
+            tVo.name = "name" + this.datalist.Count;
+            this.datalist.Add(tVo);
+        }
+       
 
         TableRenderer tr = this.list.GetComponent<TableRenderer>();
         tr.reloadData(this.datalist.Count);

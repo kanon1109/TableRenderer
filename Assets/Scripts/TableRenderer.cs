@@ -1,7 +1,15 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
-
+/// <summary>
+/// 无线滚动table 
+/// TODO 
+/// 【创建补全item】
+/// 删除item时在同一排的item 判断隐藏
+/// 上滚动时判断最后一行需要隐藏的item
+/// 下滚动时判断第一行需要显示的item
+/// 根据item的index 跳转滚动容器的位置
+/// </summary>
 public class TableRenderer : MonoBehaviour 
 {
     //item容器
@@ -112,14 +120,13 @@ public class TableRenderer : MonoBehaviour
     /// <param name="count">需要创建item的个数</param>
     void createItem(GameObject prefab, int createLineCount, int count)
     {
-        if (this.itemLineList == null) this.itemLineList = new List<List<GameObject>>();
         if (createLineCount < 0) return;
         if (count <= 0) return;
+        if (this.itemLineList == null)
+            this.itemLineList = new List<List<GameObject>>();
         //表示相同一排内 删除或增加 item
-        int createCount = count - this.totalCount;
-        print("createCount" + createCount);
-        print("createLineCount" + createLineCount);
-        if (createCount <= 0) return;
+        int showCreateCount = count - this.totalCount; //实际显示的数量
+        if (showCreateCount <= 0) return;
         //没有创建过
         for (int i = 0; i < createLineCount; ++i)
         {
@@ -131,37 +138,49 @@ public class TableRenderer : MonoBehaviour
             this.curLastLineIndex = 0;
             this.curLastLineItemIndex = 0;
         }
-        int lastLineIndex = this.curLastLineIndex;
-        print("plastLineIndex" + lastLineIndex);
-        print("curLastLineItemIndex " + curLastLineItemIndex + " this.lineItemCount " + this.lineItemCount);
-        //如果最后一排未放满
-        if (this.curLastLineItemIndex == this.lineItemCount - 1)
+        List<GameObject> itemList = this.itemLineList[this.curLastLineIndex];
+        int length = itemList.Count;
+        //计算补全的数量
+        int supplementCount = length - (this.curLastLineItemIndex + 1);
+        if (supplementCount > showCreateCount) supplementCount = showCreateCount;
+        int createdCount = 0;
+        //TODO 找到补全的数量
+        for (int i = 0; i < supplementCount; ++i)
         {
-            //重新设置最后一排数据
-            lastLineIndex++;
-        }
-        print("lastLineIndex" + lastLineIndex);
-        print("this.itemLineList.Count " + this.itemLineList.Count);
-        int curCount = 0;
-        while (curCount < createCount)
-        {
-            GameObject item = MonoBehaviour.Instantiate(prefab, new Vector3(0, 0), new Quaternion()) as GameObject;
-            item.transform.SetParent(this.content.gameObject.transform);
-            item.transform.localScale = new Vector3(1, 1, 1);
-            List<GameObject> itemList = this.itemLineList[lastLineIndex];
-            itemList.Add(item);
             this.curLastLineItemIndex++;
-            if (this.curLastLineItemIndex == this.lineItemCount - 1)
-            {
-                this.curLastLineItemIndex = 0;
-                lastLineIndex++;
-            }
-            curCount++;
+            GameObject item = itemList[this.curLastLineItemIndex];
+            item.SetActive(true);
+            createdCount++;
         }
+
+        //TODO判断补全后是否满一排，如果满了 curLastLineItemIndex 归零，curLastLineIndex累加
+        if (this.curLastLineItemIndex >= this.lineItemCount - 1)
+            this.curLastLineIndex++;
+
+        //TODO创建剩余的数量
+        for (int i = 0; i < createLineCount; ++i)
+        {
+            itemList = this.itemLineList[this.curLastLineIndex];
+            this.curLastLineItemIndex = 0;
+            this.curLastLineIndex++;
+            for (int j = 0; j < this.lineItemCount; ++j)
+            {
+                GameObject item = MonoBehaviour.Instantiate(prefab, new Vector3(0, 0), new Quaternion()) as GameObject;
+                item.transform.SetParent(this.content.gameObject.transform);
+                item.transform.localScale = new Vector3(1, 1, 1);
+                itemList.Add(item);
+                createdCount++;
+                //最后一排
+                if (createdCount > showCreateCount)
+                    item.SetActive(false);
+                else
+                    this.curLastLineItemIndex = j;
+            }
+        }
+        print("this.curLastLineItemIndex" + this.curLastLineItemIndex);
+        //TODO标记最后位置
         this.curLastLineIndex = this.itemLineList.Count - 1;
-        print("curCount" + curCount);
-        print("当前最后一个item的索引" + this.curLastLineItemIndex);
-        print("当前最后一排的索引" + this.curLastLineIndex);
+
     }
 
     /// <summary>
@@ -430,6 +449,7 @@ public class TableRenderer : MonoBehaviour
         if (this.itemLineList.Count > 0)
         {
             int index = 0;
+            int count = 0;
             //print("范围:" + this.curIndex + "--------" + (this.curIndex + this.showCount));
             for (int i = this.curLineIndex; i < this.curLineIndex + this.showLineCount; ++i)
             {
@@ -439,9 +459,13 @@ public class TableRenderer : MonoBehaviour
                     int length = itemList.Count;
                     for (int j = 0; j < length; j++)
                     {
-                        GameObject item = itemList[j];
-                        if (this.m_updateItem != null)
-                            this.m_updateItem.Invoke(item, j, isReload);
+                        count++;
+                        if (count <= this.totalCount)
+                        {
+                            GameObject item = itemList[j];
+                            if (this.m_updateItem != null)
+                                this.m_updateItem.Invoke(item, j, isReload);
+                        }
                     }
                     index++;
                 }
@@ -531,30 +555,6 @@ public class TableRenderer : MonoBehaviour
                     this.itemLineList.RemoveAt(i);
                 }
             }
-        }
-        this.updateLastIndex();
-    }
-
-    /// <summary>
-    /// 更新最后位置的索引
-    /// </summary>
-    private void updateLastIndex()
-    {
-        if (this.itemLineList != null &&
-            this.itemLineList.Count > 0)
-        {
-            //设置最后一排和最后一排最后一位
-            this.curLastLineIndex = this.itemLineList.Count - 1;
-            if (this.itemLineList.Count > 0)
-            {
-                List<GameObject> itemList = this.itemLineList[this.itemLineList.Count - 1];
-                this.curLastLineItemIndex = itemList.Count - 1;
-            }
-        }
-        else
-        {
-            this.curLastLineIndex = -1;
-            this.curLastLineItemIndex = -1;
         }
     }
 
