@@ -161,7 +161,6 @@ public class TableRenderer : MonoBehaviour
         for (int i = 0; i < createLineCount; ++i)
         {
             itemList = this.itemLineList[this.curLastLineIndex];
-            this.curLastLineItemIndex = 0;
             this.curLastLineIndex++;
             for (int j = 0; j < this.lineItemCount; ++j)
             {
@@ -173,12 +172,16 @@ public class TableRenderer : MonoBehaviour
                 //最后一排
                 if (createdCount > showCreateCount)
                     item.SetActive(false);
-                else
-                    this.curLastLineItemIndex = j;
             }
         }
-        print("this.curLastLineItemIndex" + this.curLastLineItemIndex);
+
         //TODO标记最后位置
+        this.curLastLineItemIndex = count % this.lineItemCount;
+        if (this.curLastLineIndex == 0) 
+            this.curLastLineItemIndex = this.lineItemCount - 1;
+        else 
+            this.curLastLineItemIndex--;
+        print("this.curLastLineItemIndex" + this.curLastLineItemIndex);
         this.curLastLineIndex = this.itemLineList.Count - 1;
 
     }
@@ -384,10 +387,10 @@ public class TableRenderer : MonoBehaviour
         //保存上一次显示的数量
         int prevShowLineCount = this.showLineCount;
         //判断当前多出来的排，并删除。
-        this.removeOverItem(this.totalLineCount);
-
-        if (!this.isHorizontal) //纵向
-            this.showLineCount = (int)(Mathf.Ceil(this.listHeight / (this.itemHeight + this.gapV))); //计算应该显示的数量
+        this.removeOverItem(this.totalLineCount, count);
+        //纵向 计算应该显示的排数
+        if (!this.isHorizontal) 
+            this.showLineCount = (int)(Mathf.Ceil(this.listHeight / (this.itemHeight + this.gapV))); 
         else
             this.showLineCount = (int)(Mathf.Ceil(this.listWidth / (this.itemWidth + this.gapH)));
         this.maxShowLineCount = this.showLineCount + 1;
@@ -446,6 +449,7 @@ public class TableRenderer : MonoBehaviour
     /// <returns></returns>
     private void reloadItem(bool isReload = false)
     {
+        if (this.itemLineList == null) return;
         if (this.itemLineList.Count > 0)
         {
             int index = 0;
@@ -479,6 +483,7 @@ public class TableRenderer : MonoBehaviour
     /// <returns></returns>
     private void fixItemPos()
     {
+        if (this.itemLineList == null) return;
         //拖动时修正位置
         if (this.itemLineList.Count > 0)
         {
@@ -528,22 +533,29 @@ public class TableRenderer : MonoBehaviour
     /// <summary>
     /// 删除多余的一排item
     /// </summary>
+    /// <param name="totalLineCount">当前应该显示的总排数</param>
     /// <param name="count">当前应该显示的数量</param>
     /// <returns></returns>
-    void removeOverItem(int totalLineCount)
+    void removeOverItem(int totalLineCount, int count)
     {
+        //删除多余的排
         if (this.itemLineList != null &&
             this.itemLineList.Count > 0)
         {
+            List<GameObject> itemList;
+            int length;
             //删除多余的item
+            print("当前的排totalLineCount = " + totalLineCount);
+            print("当前的排showLineCount = " + showLineCount);
             if (totalLineCount < this.showLineCount)
             {
                 //删除 this.showCount - count 个 item
                 for (int i = this.showLineCount - 1; i >= totalLineCount; --i)
                 {
-                    List<GameObject> itemList = this.itemLineList[i];
-                    int length = itemList.Count;
-                    for (int j = 0; j < length; ++j)
+                    print("删除第" + i + "排");
+                    itemList = this.itemLineList[i];
+                    length = itemList.Count;
+                    for (int j = length - 1; j >= 0; --j)
 			        {
                         GameObject item = itemList[j];
                         if (item != null)
@@ -553,6 +565,29 @@ public class TableRenderer : MonoBehaviour
                         }
 			        }
                     this.itemLineList.RemoveAt(i);
+                }
+            }
+            if (totalLineCount <= this.showLineCount && 
+                count < this.totalCount &&
+                this.itemLineList.Count > 0)
+            {
+                //TODO标记最后位置
+                this.curLastLineIndex = this.itemLineList.Count - 1;
+                //最后一排item的数量
+                this.curLastLineItemIndex = count % this.lineItemCount;
+                if (this.curLastLineItemIndex == 0)
+                    this.curLastLineItemIndex = this.lineItemCount - 1;
+                else
+                    this.curLastLineItemIndex--;
+                print("删除后最好一排索引" + this.curLastLineIndex);
+                print("删除后最好一排最后一个索引" + this.curLastLineItemIndex);
+                //TODO 隐藏一排内多余的item
+                itemList = this.itemLineList[this.curLastLineIndex];
+                length = itemList.Count;
+                for (int i = this.curLastLineItemIndex + 1; i < length; i++)
+                {
+                    GameObject item = itemList[i];
+                    item.SetActive(false);
                 }
             }
         }
