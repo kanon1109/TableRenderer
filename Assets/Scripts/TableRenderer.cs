@@ -5,7 +5,7 @@ using UnityEngine.UI;
 /// 无线滚动table 
 /// TODO 
 /// 【创建补全item】
-/// 删除item时在同一排的item 判断隐藏
+/// 【删除item时在同一排的item 判断隐藏】
 /// 上滚动时判断最后一行需要隐藏的item
 /// 下滚动时判断第一行需要显示的item
 /// 根据item的index 跳转滚动容器的位置
@@ -68,6 +68,8 @@ public class TableRenderer : MonoBehaviour
     private float left;
     //右边位置
     private float right;
+    //content的transform
+    private RectTransform rectTransform;
     public void init(bool isHorizontal = false,
                      int count = 0,
                      int lineItemCount = 0,
@@ -100,8 +102,8 @@ public class TableRenderer : MonoBehaviour
         this.scroll.GetComponent<RectTransform>().sizeDelta = v2;
         this.listWidth = this.scroll.GetComponent<RectTransform>().sizeDelta.x;
         this.listHeight = this.scroll.GetComponent<RectTransform>().sizeDelta.y;
-
-        this.content.GetComponent<RectTransform>().sizeDelta = new Vector2(listWidth, listHeight);
+        this.rectTransform = this.content.GetComponent<RectTransform>();
+        this.rectTransform.sizeDelta = new Vector2(listWidth, listHeight);
         this.content.transform.localPosition = new Vector3(0, 0);
         this.prevItemPos = new Vector2();
         this.contentStartPos = this.scroll.transform.localPosition;
@@ -118,7 +120,7 @@ public class TableRenderer : MonoBehaviour
     /// <param name="prefab">需要创建item的预设</param>
     /// <param name="createLineCount">创建的行(列)数</param>
     /// <param name="count">需要创建item的个数</param>
-    void createItem(GameObject prefab, int createLineCount, int count)
+    private void createItem(GameObject prefab, int createLineCount, int count)
     {
         if (createLineCount < 0) return;
         if (count <= 0) return;
@@ -155,7 +157,6 @@ public class TableRenderer : MonoBehaviour
             item.SetActive(true);
             createdCount++;
         }
-
 
         //TODO判断补全后是否满一排，如果满了 curLastLineItemIndex 归零，curLastLineIndex累加
         if (this.curLastLineItemIndex >= this.lineItemCount - 1)
@@ -195,7 +196,7 @@ public class TableRenderer : MonoBehaviour
     /// 更新item
     /// </summary>
     /// <returns></returns>
-    void updateItem()
+    private void updateItem()
     {
         if (!this.isReload) return;
         if (this.itemLineList == null) return;
@@ -413,9 +414,9 @@ public class TableRenderer : MonoBehaviour
         this.totalCount = count;
         this.updateBorder();
         if (!this.isHorizontal)
-            this.content.GetComponent<RectTransform>().sizeDelta = new Vector2(this.content.GetComponent<RectTransform>().sizeDelta.x, this.totalLineCount * (this.itemHeight + this.gapV));
+            this.rectTransform.sizeDelta = new Vector2(this.rectTransform.sizeDelta.x, this.totalLineCount * (this.itemHeight + this.gapV));
         else
-            this.content.GetComponent<RectTransform>().sizeDelta = new Vector2(this.totalLineCount * (this.itemWidth + this.gapH), this.content.GetComponent<RectTransform>().sizeDelta.y);
+            this.rectTransform.sizeDelta = new Vector2(this.totalLineCount * (this.itemWidth + this.gapH), this.rectTransform.sizeDelta.y);
         this.layoutItem();
         //重新调用回调
         this.reloadItem(true);
@@ -427,7 +428,7 @@ public class TableRenderer : MonoBehaviour
     /// item布局
     /// </summary>
     /// <returns></returns>
-    void layoutItem()
+    private void layoutItem()
     {
         if (this.itemLineList == null) return;
         int count = this.itemLineList.Count;
@@ -541,15 +542,14 @@ public class TableRenderer : MonoBehaviour
     /// <param name="totalLineCount">当前应该显示的总排数</param>
     /// <param name="count">当前应该显示的数量</param>
     /// <returns></returns>
-    void removeOverItem(int totalLineCount, int count)
+    private void removeOverItem(int totalLineCount, int count)
     {
-        //删除多余的排
         if (this.itemLineList != null &&
             this.itemLineList.Count > 0)
         {
             List<GameObject> itemList;
             int length;
-            //删除多余的item
+            //删除多余的排
             print("总的行数 = " + totalLineCount);
             print("可以显示的行数 " + showLineCount);
             if (totalLineCount < this.showLineCount)
@@ -577,8 +577,9 @@ public class TableRenderer : MonoBehaviour
                 this.curLastLineItemIndex = this.lineItemCount;
             }
 
+            //隐藏一排内的item
             if (totalLineCount <= this.showLineCount && 
-                count < this.totalCount &&
+                count < this.totalCount && 
                 this.itemLineList.Count > 0)
             {
                 //TODO标记最后位置
@@ -607,7 +608,7 @@ public class TableRenderer : MonoBehaviour
     /// 更新边界
     /// </summary>
     /// <returns></returns>
-    void updateBorder()
+    private void updateBorder()
     {
         //上下
         this.top = this.itemHeight + this.gapV;
