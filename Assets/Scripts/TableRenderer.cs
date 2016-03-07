@@ -138,6 +138,9 @@ public class TableRenderer : MonoBehaviour
             this.curLastLineIndex = 0;
             this.curLastLineItemIndex = 0;
         }
+
+        print("prev this.curLastLineIndex" + this.curLastLineIndex);
+
         List<GameObject> itemList = this.itemLineList[this.curLastLineIndex];
         int length = itemList.Count;
         //计算补全的数量
@@ -153,10 +156,12 @@ public class TableRenderer : MonoBehaviour
             createdCount++;
         }
 
+
         //TODO判断补全后是否满一排，如果满了 curLastLineItemIndex 归零，curLastLineIndex累加
         if (this.curLastLineItemIndex >= this.lineItemCount - 1)
             this.curLastLineIndex++;
 
+        print("this.curLastLineIndex" + this.curLastLineIndex);
         //TODO创建剩余的数量
         for (int i = 0; i < createLineCount; ++i)
         {
@@ -177,7 +182,7 @@ public class TableRenderer : MonoBehaviour
 
         //TODO标记最后位置
         this.curLastLineItemIndex = count % this.lineItemCount;
-        if (this.curLastLineIndex == 0) 
+        if (this.curLastLineItemIndex == 0) 
             this.curLastLineItemIndex = this.lineItemCount - 1;
         else 
             this.curLastLineItemIndex--;
@@ -545,8 +550,8 @@ public class TableRenderer : MonoBehaviour
             List<GameObject> itemList;
             int length;
             //删除多余的item
-            print("当前的排totalLineCount = " + totalLineCount);
-            print("当前的排showLineCount = " + showLineCount);
+            print("总的行数 = " + totalLineCount);
+            print("可以显示的行数 " + showLineCount);
             if (totalLineCount < this.showLineCount)
             {
                 //删除 this.showCount - count 个 item
@@ -566,7 +571,12 @@ public class TableRenderer : MonoBehaviour
 			        }
                     this.itemLineList.RemoveAt(i);
                 }
+
+                //标记最后位置
+                this.curLastLineIndex = this.itemLineList.Count - 1;
+                this.curLastLineItemIndex = this.lineItemCount;
             }
+
             if (totalLineCount <= this.showLineCount && 
                 count < this.totalCount &&
                 this.itemLineList.Count > 0)

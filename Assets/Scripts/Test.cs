@@ -44,6 +44,7 @@ public class Test : MonoBehaviour
     {
         this.datalist = new List<TestVo>();
         int count = Random.Range(0, 30);
+        //count = 24;
         print("新列表数量count = " + count);
         for (int i = 1; i <= count; i++)
         {
