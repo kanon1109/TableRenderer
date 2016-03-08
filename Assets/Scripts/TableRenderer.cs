@@ -48,8 +48,6 @@ public class TableRenderer : MonoBehaviour
     private int lineItemCount = 0;
     //当前显示的排数
     private int showLineCount = 0;
-    //可显示的总排数
-    private int maxShowLineCount = 0;
     //当前第一排的索引
     private int curLineIndex = 0;
     //总的多少行或者多少列
@@ -68,8 +66,10 @@ public class TableRenderer : MonoBehaviour
     private float left;
     //右边位置
     private float right;
-    //content的transform
+    //content的transform组件
     private RectTransform rectTransform;
+    //最后一排item的索引位置
+    private int lastItemLindex = 0;
     public void init(bool isHorizontal = false,
                      int count = 0,
                      int lineItemCount = 0,
@@ -122,6 +122,7 @@ public class TableRenderer : MonoBehaviour
     /// <param name="count">需要创建item的个数</param>
     private void createItem(GameObject prefab, int createLineCount, int count)
     {
+        //createLineCount = 0 表示一行也不创建 只补全一排item
         if (createLineCount < 0) return;
         if (count <= 0) return;
         if (this.itemLineList == null)
@@ -220,12 +221,18 @@ public class TableRenderer : MonoBehaviour
                         this.itemLineList.RemoveAt(i);
                         List<GameObject> lastItemList = this.itemLineList[this.itemLineList.Count - 1];
                         GameObject lastItem = lastItemList[0];
+                        print("this.curLineIndex" + this.curLineIndex);
+                        print("this.totalLineCount - 1 = " + (this.totalLineCount - 1));
                         for (int j = 0; j < itemListLength; j++)
                         {
                             //当前第i排的所有item
                             GameObject curLineItem = itemList[j];
                             curLineItem.transform.localPosition = new Vector3(curLineItem.transform.localPosition.x,
                                                                               lastItem.transform.localPosition.y - this.itemHeight - this.gapV);
+                            //隐藏最后一排缺少的item
+                            if (this.curLineIndex == this.totalLineCount - this.showLineCount - 1 && 
+                                j > this.curLastLineItemIndex) 
+                                curLineItem.SetActive(false);
                         }
                         this.itemLineList.Add(itemList);
                         this.curLineIndex++;
@@ -238,6 +245,9 @@ public class TableRenderer : MonoBehaviour
                             GameObject curLineItem = itemList[j];
                             curLineItem.transform.localPosition = new Vector3(curLineItem.transform.localPosition.x,
                                                                               -this.itemHeight - this.gapV);
+                            if (this.curLineIndex == this.totalLineCount - this.showLineCount - 1 && 
+                                j > this.curLastLineItemIndex)
+                                curLineItem.SetActive(false);
                         }
                         this.curLineIndex = 0;
                     }
@@ -257,9 +267,9 @@ public class TableRenderer : MonoBehaviour
                         {
                             //当前第i排的所有item
                             GameObject curLineItem = itemList[j];
+                            curLineItem.SetActive(true);
                             curLineItem.transform.localPosition = new Vector3(curLineItem.transform.localPosition.x,
                                                                               firstItem.transform.localPosition.y + this.itemHeight + this.gapV);
-                            print(curLineItem.transform.localPosition.x + " " + curLineItem.transform.localPosition.y);
                         }
                         this.itemLineList.Insert(0, itemList);
                         this.curLineIndex--;
@@ -270,6 +280,7 @@ public class TableRenderer : MonoBehaviour
                         {
                             //当前第i排的所有item
                             GameObject curLineItem = itemList[j];
+                            curLineItem.SetActive(true);
                             curLineItem.transform.localPosition = new Vector3(curLineItem.transform.localPosition.x,
                                                                               -this.itemHeight - this.gapV);
                         }
@@ -284,7 +295,7 @@ public class TableRenderer : MonoBehaviour
                 float posX = scroll.transform.InverseTransformPoint(item.transform.position).x;
                 if (posX < this.left && this.curLineIndex < this.totalLineCount - this.showLineCount)
                 {
-                    //往上拖动时
+                    //往左拖动时
                     //如果第一个位置超过顶部范围，并且不是滚动到最后一个，则重新设置位置。
                     if (this.itemLineList.Count > 1)
                     {
@@ -297,6 +308,10 @@ public class TableRenderer : MonoBehaviour
                             GameObject curLineItem = itemList[j];
                             curLineItem.transform.localPosition = new Vector3(lastItem.transform.localPosition.x + this.itemWidth + this.gapH,
                                                                               curLineItem.transform.localPosition.y);
+                            //隐藏最后一排缺少的item
+                            if (this.curLineIndex == this.totalLineCount - this.showLineCount - 1 &&
+                                j > this.curLastLineItemIndex)
+                                curLineItem.SetActive(false);
                         }
                         this.itemLineList.Add(itemList);
                         this.curLineIndex++;
@@ -309,6 +324,10 @@ public class TableRenderer : MonoBehaviour
                             GameObject curLineItem = itemList[j];
                             curLineItem.transform.localPosition = new Vector3(this.itemWidth + this.gapH,
                                                                               curLineItem.transform.localPosition.y);
+                            //隐藏最后一排缺少的item
+                            if (this.curLineIndex == this.totalLineCount - this.showLineCount - 1 &&
+                                j > this.curLastLineItemIndex)
+                                curLineItem.SetActive(false);
                         }
                         this.curLineIndex = 0;
                     }
@@ -316,7 +335,7 @@ public class TableRenderer : MonoBehaviour
                 }
                 else if (posX > this.right && this.curLineIndex > 0)
                 {
-                    //往下拖动时
+                    //往右拖动时
                     //如果底部位置超过范围,并且不是滚动到第一个位置，则重新设置位置。
                     if (this.itemLineList.Count > 1)
                     {
@@ -327,6 +346,7 @@ public class TableRenderer : MonoBehaviour
                         {
                             //当前第i排的所有item
                             GameObject curLineItem = itemList[j];
+                            curLineItem.SetActive(true);
                             curLineItem.transform.localPosition = new Vector3(firstItem.transform.localPosition.x - this.itemWidth - this.gapH,
                                                                               curLineItem.transform.localPosition.y);
                         }
@@ -339,6 +359,7 @@ public class TableRenderer : MonoBehaviour
                         {
                             //当前第i排的所有item
                             GameObject curLineItem = itemList[j];
+                            curLineItem.SetActive(true);
                             curLineItem.transform.localPosition = new Vector3(this.itemWidth + this.gapH,
                                                                               curLineItem.transform.localPosition.y);
                         }
@@ -383,8 +404,10 @@ public class TableRenderer : MonoBehaviour
             int overLineCount = curLastLineIndex - lastLineIndex;
             this.curLineIndex -= overLineCount;
             //补全位置
-            this.prevItemPos.y += (this.itemHeight + this.gapV) * overLineCount;
-            this.prevItemPos.x -= (this.itemWidth + this.gapH) * overLineCount;
+            if (!isHorizontal)
+                this.prevItemPos.y += (this.itemHeight + this.gapV) * overLineCount;
+            else
+                this.prevItemPos.x -= (this.itemWidth + this.gapH) * overLineCount;
             //防止去除溢出后 索引为负数。
             if (this.curLineIndex < 0) this.curLineIndex = 0;
         }
@@ -399,7 +422,6 @@ public class TableRenderer : MonoBehaviour
             this.showLineCount = (int)(Mathf.Ceil(this.listHeight / (this.itemHeight + this.gapV))); 
         else
             this.showLineCount = (int)(Mathf.Ceil(this.listWidth / (this.itemWidth + this.gapH)));
-        this.maxShowLineCount = this.showLineCount + 1;
         //需要创建的数量不大于实际数量
         if (this.totalLineCount <= this.showLineCount)
             this.showLineCount = this.totalLineCount; //取实际数据的数量
