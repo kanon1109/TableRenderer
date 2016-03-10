@@ -16,7 +16,7 @@ public class Test : MonoBehaviour
         this.btn.onClick.AddListener(btnHandler);
 
         this.datalist = new List<TestVo>();
-        for (int i = 0; i < 300; ++i)
+        for (int i = 0; i < 73; ++i)
         {
             TestVo tVo = new TestVo();
             tVo.name = "name" + i;
@@ -24,12 +24,14 @@ public class Test : MonoBehaviour
         }
         TableRenderer tr = this.list.GetComponent<TableRenderer>();
 
-        tr.init(false, datalist.Count, 5, 10, 10, updateTableItem);
+        tr.init(true, datalist.Count, 5, 10, 10, updateTableItem);
 	}
 
     private void btnHandler()
     {
-
+        int index = Random.Range(0, this.datalist.Count - 1);
+        print("跳转到index : " + index);
+        this.list.GetComponent<TableRenderer>().rollPosByIndex(index);
     }
 
     private void updateTableItem(GameObject item, int index, bool isReload)
@@ -44,7 +46,7 @@ public class Test : MonoBehaviour
     {
         this.datalist = new List<TestVo>();
         int count = Random.Range(0, 90);
-        count = 10;
+        count = 53;
         print("新列表数量count = " + count);
         for (int i = 1; i <= count; i++)
         {

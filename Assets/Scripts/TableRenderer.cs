@@ -67,9 +67,9 @@ public class TableRenderer : MonoBehaviour
     //右边位置
     private float right;
     //content的transform组件
-    private RectTransform rectTransform;
-    //最后一排item的索引位置
-    private int lastItemLindex = 0;
+    private RectTransform contentRectTf;
+    //滚动组件
+    private ScrollRect sr;
     public void init(bool isHorizontal = false,
                      int count = 0,
                      int lineItemCount = 0,
@@ -85,11 +85,13 @@ public class TableRenderer : MonoBehaviour
         this.m_updateItem = updateItem;
         this.isHorizontal = isHorizontal;
         //设置组件横向纵向滚动
-        this.scroll.GetComponent<ScrollRect>().horizontal = isHorizontal;
-        this.scroll.GetComponent<ScrollRect>().vertical = !isHorizontal;
+        this.sr = this.scroll.GetComponent<ScrollRect>();
+        this.sr.horizontal = this.isHorizontal;
+        this.sr.vertical = !this.isHorizontal;
         this.gapH = gapH;
         this.gapV = gapV;
-
+        this.listWidth = this.scroll.GetComponent<RectTransform>().sizeDelta.x;
+        this.listHeight = this.scroll.GetComponent<RectTransform>().sizeDelta.y;
         this.itemWidth = this.itemPrefab.GetComponent<RectTransform>().sizeDelta.x;
         this.itemHeight = this.itemPrefab.GetComponent<RectTransform>().sizeDelta.y;
 
@@ -100,10 +102,9 @@ public class TableRenderer : MonoBehaviour
             v2 = new Vector2(this.scroll.GetComponent<RectTransform>().sizeDelta.x, (this.itemHeight + gapH) * lineItemCount);
 
         this.scroll.GetComponent<RectTransform>().sizeDelta = v2;
-        this.listWidth = this.scroll.GetComponent<RectTransform>().sizeDelta.x;
-        this.listHeight = this.scroll.GetComponent<RectTransform>().sizeDelta.y;
-        this.rectTransform = this.content.GetComponent<RectTransform>();
-        this.rectTransform.sizeDelta = new Vector2(listWidth, listHeight);
+        
+        this.contentRectTf = this.content.GetComponent<RectTransform>();
+        this.contentRectTf.sizeDelta = new Vector2(listWidth, listHeight);
         this.content.transform.localPosition = new Vector3(0, 0);
         this.prevItemPos = new Vector2();
         this.contentStartPos = this.scroll.transform.localPosition;
@@ -141,9 +142,6 @@ public class TableRenderer : MonoBehaviour
             this.curLastLineIndex = 0;
             this.curLastLineItemIndex = 0;
         }
-
-        print("prev this.curLastLineIndex" + this.curLastLineIndex);
-
         List<GameObject> itemList = this.itemLineList[this.curLastLineIndex];
         int length = itemList.Count;
         //计算补全的数量
@@ -158,7 +156,6 @@ public class TableRenderer : MonoBehaviour
             item.SetActive(true);
             createdCount++;
         }
-
         //TODO判断补全后是否满一排，如果满了 curLastLineItemIndex 归零，curLastLineIndex累加
         if (this.curLastLineItemIndex >= this.lineItemCount - 1)
             this.curLastLineIndex++;
@@ -181,16 +178,13 @@ public class TableRenderer : MonoBehaviour
                     item.SetActive(false);
             }
         }
-
         //TODO标记最后位置
         this.curLastLineItemIndex = count % this.lineItemCount;
         if (this.curLastLineItemIndex == 0) 
             this.curLastLineItemIndex = this.lineItemCount - 1;
         else 
             this.curLastLineItemIndex--;
-        print("this.curLastLineItemIndex" + this.curLastLineItemIndex);
         this.curLastLineIndex = this.itemLineList.Count - 1;
-
     }
 
     /// <summary>
@@ -205,8 +199,8 @@ public class TableRenderer : MonoBehaviour
         for (int i = 0; i < this.itemLineList.Count; ++i)
         {
             List<GameObject> itemList = this.itemLineList[i];
-            int itemListLength = itemList.Count;
             GameObject item = itemList[0];
+            int itemListLength = itemList.Count;
             if(!this.isHorizontal)
             {
                 //获取item相对于scroll的坐标
@@ -221,14 +215,14 @@ public class TableRenderer : MonoBehaviour
                         this.itemLineList.RemoveAt(i);
                         List<GameObject> lastItemList = this.itemLineList[this.itemLineList.Count - 1];
                         GameObject lastItem = lastItemList[0];
-                        print("this.curLineIndex" + this.curLineIndex);
-                        print("this.totalLineCount - 1 = " + (this.totalLineCount - 1));
+                        Transform lastItemTf = lastItem.transform;
                         for (int j = 0; j < itemListLength; j++)
                         {
                             //当前第i排的所有item
                             GameObject curLineItem = itemList[j];
-                            curLineItem.transform.localPosition = new Vector3(curLineItem.transform.localPosition.x,
-                                                                              lastItem.transform.localPosition.y - this.itemHeight - this.gapV);
+                            Transform curLineItemTf = curLineItem.transform;
+                            curLineItemTf.localPosition = new Vector3(curLineItemTf.localPosition.x,
+                                                                      lastItemTf.localPosition.y - this.itemHeight - this.gapV);
                             //隐藏最后一排缺少的item
                             if (this.curLineIndex == this.totalLineCount - this.showLineCount - 1 && 
                                 j > this.curLastLineItemIndex) 
@@ -243,8 +237,9 @@ public class TableRenderer : MonoBehaviour
                         {
                             //当前第i排的所有item
                             GameObject curLineItem = itemList[j];
-                            curLineItem.transform.localPosition = new Vector3(curLineItem.transform.localPosition.x,
-                                                                              -this.itemHeight - this.gapV);
+                            Transform curLineItemTf = curLineItem.transform;
+                            curLineItemTf.localPosition = new Vector3(curLineItemTf.localPosition.x,
+                                                                      -this.itemHeight - this.gapV);
                             if (this.curLineIndex == this.totalLineCount - this.showLineCount - 1 && 
                                 j > this.curLastLineItemIndex)
                                 curLineItem.SetActive(false);
@@ -263,13 +258,15 @@ public class TableRenderer : MonoBehaviour
                         this.itemLineList.RemoveAt(i);
                         List<GameObject> firstItemList = this.itemLineList[0];
                         GameObject firstItem = firstItemList[0];
+                        Transform firstItemTf = firstItem.transform;
                         for (int j = 0; j < itemListLength; j++)
                         {
                             //当前第i排的所有item
                             GameObject curLineItem = itemList[j];
+                            Transform curLineItemTf = curLineItem.transform;
                             curLineItem.SetActive(true);
-                            curLineItem.transform.localPosition = new Vector3(curLineItem.transform.localPosition.x,
-                                                                              firstItem.transform.localPosition.y + this.itemHeight + this.gapV);
+                            curLineItemTf.localPosition = new Vector3(curLineItemTf.localPosition.x,
+                                                                      firstItemTf.localPosition.y + this.itemHeight + this.gapV);
                         }
                         this.itemLineList.Insert(0, itemList);
                         this.curLineIndex--;
@@ -280,9 +277,10 @@ public class TableRenderer : MonoBehaviour
                         {
                             //当前第i排的所有item
                             GameObject curLineItem = itemList[j];
+                            Transform curLineItemTf = curLineItem.transform;
                             curLineItem.SetActive(true);
-                            curLineItem.transform.localPosition = new Vector3(curLineItem.transform.localPosition.x,
-                                                                              -this.itemHeight - this.gapV);
+                            curLineItemTf.localPosition = new Vector3(curLineItemTf.localPosition.x,
+                                                                      -this.itemHeight - this.gapV);
                         }
                         this.curLineIndex = 0;
                     }
@@ -302,12 +300,14 @@ public class TableRenderer : MonoBehaviour
                         this.itemLineList.RemoveAt(i);
                         List<GameObject> lastItemList = this.itemLineList[this.itemLineList.Count - 1];
                         GameObject lastItem = lastItemList[0];
+                        Transform lastItemTf = lastItem.transform;
                         for (int j = 0; j < itemListLength; j++)
                         {
                             //当前第i排的所有item
                             GameObject curLineItem = itemList[j];
-                            curLineItem.transform.localPosition = new Vector3(lastItem.transform.localPosition.x + this.itemWidth + this.gapH,
-                                                                              curLineItem.transform.localPosition.y);
+                            Transform curLineItemTf = curLineItem.transform;
+                            curLineItemTf.localPosition = new Vector3(lastItemTf.localPosition.x + this.itemWidth + this.gapH,
+                                                                      curLineItemTf.localPosition.y);
                             //隐藏最后一排缺少的item
                             if (this.curLineIndex == this.totalLineCount - this.showLineCount - 1 &&
                                 j > this.curLastLineItemIndex)
@@ -322,8 +322,9 @@ public class TableRenderer : MonoBehaviour
                         {
                             //当前第i排的所有item
                             GameObject curLineItem = itemList[j];
-                            curLineItem.transform.localPosition = new Vector3(this.itemWidth + this.gapH,
-                                                                              curLineItem.transform.localPosition.y);
+                            Transform curLineItemTf = curLineItem.transform;
+                            curLineItemTf.localPosition = new Vector3(this.itemWidth + this.gapH,
+                                                                      curLineItemTf.localPosition.y);
                             //隐藏最后一排缺少的item
                             if (this.curLineIndex == this.totalLineCount - this.showLineCount - 1 &&
                                 j > this.curLastLineItemIndex)
@@ -342,13 +343,15 @@ public class TableRenderer : MonoBehaviour
                         this.itemLineList.RemoveAt(i);
                         List<GameObject> firstItemList = this.itemLineList[0];
                         GameObject firstItem = firstItemList[0];
+                        Transform firstItemTf = firstItem.transform;
                         for (int j = 0; j < itemListLength; j++)
                         {
                             //当前第i排的所有item
                             GameObject curLineItem = itemList[j];
+                            Transform curLineItemTf = curLineItem.transform;
                             curLineItem.SetActive(true);
-                            curLineItem.transform.localPosition = new Vector3(firstItem.transform.localPosition.x - this.itemWidth - this.gapH,
-                                                                              curLineItem.transform.localPosition.y);
+                            curLineItemTf.localPosition = new Vector3(firstItemTf.localPosition.x - this.itemWidth - this.gapH,
+                                                                      curLineItemTf.localPosition.y);
                         }
                         this.itemLineList.Insert(0, itemList);
                         this.curLineIndex--;
@@ -359,9 +362,10 @@ public class TableRenderer : MonoBehaviour
                         {
                             //当前第i排的所有item
                             GameObject curLineItem = itemList[j];
+                            Transform curLineItemTf = curLineItem.transform;
                             curLineItem.SetActive(true);
-                            curLineItem.transform.localPosition = new Vector3(this.itemWidth + this.gapH,
-                                                                              curLineItem.transform.localPosition.y);
+                            curLineItemTf.localPosition = new Vector3(this.itemWidth + this.gapH,
+                                                                      curLineItemTf.localPosition.y);
                         }
                         this.curLineIndex = 0;
                     }
@@ -428,22 +432,31 @@ public class TableRenderer : MonoBehaviour
         else
             this.showLineCount += 1; //取计算的数量 + 1
         //创建数量
-        print("可显示的行数 " + this.showLineCount);
         int createLineCount = this.showLineCount - prevShowLineCount;
-        print("需要创建的行数 " + createLineCount);
         //根据显示数量创建item
         this.createItem(this.itemPrefab, createLineCount, count);
         this.totalCount = count;
         this.updateBorder();
-        if (!this.isHorizontal)
-            this.rectTransform.sizeDelta = new Vector2(this.rectTransform.sizeDelta.x, this.totalLineCount * (this.itemHeight + this.gapV));
-        else
-            this.rectTransform.sizeDelta = new Vector2(this.totalLineCount * (this.itemWidth + this.gapH), this.rectTransform.sizeDelta.y);
+        //总数更新content大小
+        this.updateContentSize();
+        //修正content的位置
+        this.fixContentPos();
+        //布局
         this.layoutItem();
         //重新调用回调
         this.reloadItem(true);
-        this.fixItemPos();
         this.isReload = true;
+    }
+
+    /// <summary>
+    /// 根据创建的总数更新content的大小
+    /// </summary>
+    private void updateContentSize()
+    {
+        if (!this.isHorizontal)
+            this.contentRectTf.sizeDelta = new Vector2(this.contentRectTf.sizeDelta.x, this.totalLineCount * (this.itemHeight + this.gapV));
+        else
+            this.contentRectTf.sizeDelta = new Vector2(this.totalLineCount * (this.itemWidth + this.gapH), this.contentRectTf.sizeDelta.y);
     }
 
     /// <summary>
@@ -481,7 +494,6 @@ public class TableRenderer : MonoBehaviour
         if (this.itemLineList.Count > 0)
         {
             int index = 0;
-            int count = 0;
             //print("范围:" + this.curIndex + "--------" + (this.curIndex + this.showCount));
             for (int i = this.curLineIndex; i < this.curLineIndex + this.showLineCount; ++i)
             {
@@ -491,12 +503,12 @@ public class TableRenderer : MonoBehaviour
                     int length = itemList.Count;
                     for (int j = 0; j < length; j++)
                     {
-                        count++;
-                        if (count <= this.totalCount)
+                        int itemIndex = i * this.lineItemCount + j;
+                        if (itemIndex <= this.totalCount - 1)
                         {
                             GameObject item = itemList[j];
                             if (this.m_updateItem != null)
-                                this.m_updateItem.Invoke(item, j, isReload);
+                                this.m_updateItem.Invoke(item, itemIndex, isReload);
                         }
                     }
                     index++;
@@ -532,23 +544,64 @@ public class TableRenderer : MonoBehaviour
             {
                 //上一排的第一个做为定位
                 GameObject prevItem = prevItemList[0];
+                Transform prevItemTf = prevItem.transform;
                 List<GameObject> itemList = this.itemLineList[i];
                 int length = itemList.Count;
                 for (int j = 0; j < length; j++)
                 {
                     GameObject item = itemList[j];
+                    Transform itemTf = item.transform;
                     if (!this.isHorizontal)
                     {
-                        item.transform.localPosition = new Vector3(item.transform.localPosition.x,
-                                                                   prevItem.transform.localPosition.y - this.itemHeight - this.gapV);
+                        itemTf.localPosition = new Vector3(itemTf.localPosition.x,
+                                                            prevItemTf.localPosition.y - this.itemHeight - this.gapV);
                     }
                     else
                     {
-                        item.transform.localPosition = new Vector3(prevItem.transform.localPosition.x + this.itemWidth + this.gapH,
-                                                                   item.transform.localPosition.y);
+                        itemTf.localPosition = new Vector3(prevItemTf.localPosition.x + this.itemWidth + this.gapH,
+                                                           itemTf.localPosition.y);
                     }
                 }
                 prevItemList = this.itemLineList[i];
+            }
+        }
+    }
+
+    /// <summary>
+    /// 修正content的位置
+    /// </summary>
+    private void fixContentPos()
+    {
+        if (!this.isHorizontal)
+        {
+            //防止数量减少后content的位置在遮罩上面
+            if (this.contentRectTf.sizeDelta.y <= this.listHeight)
+            {
+                //如果高度不够但content顶部超过scroll的顶部则content顶部归零对齐
+                if (this.contentRectTf.localPosition.y > 0)
+                    this.contentRectTf.localPosition = new Vector3(this.contentRectTf.localPosition.x, 0);
+            }
+            else
+            {
+                //如果高度足够但content底部超过scroll的底部则content底部对齐scroll的底部
+                if (this.contentRectTf.localPosition.y - this.contentRectTf.sizeDelta.y > -this.listHeight)
+                    this.contentRectTf.localPosition = new Vector3(this.contentRectTf.localPosition.x,
+                                                                    -this.listHeight + this.contentRectTf.sizeDelta.y);
+            }
+        }
+        else
+        {
+            //防止数量减少后content的位置在遮罩左面
+            if (this.contentRectTf.sizeDelta.x <= this.listWidth)
+            {
+                if (this.contentRectTf.localPosition.x < 0)
+                    this.contentRectTf.localPosition = new Vector3(0, this.contentRectTf.localPosition.y);
+            }
+            else
+            {
+                if (this.contentRectTf.localPosition.x + this.contentRectTf.sizeDelta.x < this.listWidth)
+                    this.contentRectTf.localPosition = new Vector3(this.listWidth - this.contentRectTf.sizeDelta.x,
+                                                                    this.contentRectTf.localPosition.y);
             }
         }
     }
@@ -572,14 +625,11 @@ public class TableRenderer : MonoBehaviour
             List<GameObject> itemList;
             int length;
             //删除多余的排
-            print("总的行数 = " + totalLineCount);
-            print("可以显示的行数 " + showLineCount);
             if (totalLineCount < this.showLineCount)
             {
                 //删除 this.showCount - count 个 item
                 for (int i = this.showLineCount - 1; i >= totalLineCount; --i)
                 {
-                    print("删除第" + i + "排");
                     itemList = this.itemLineList[i];
                     length = itemList.Count;
                     for (int j = length - 1; j >= 0; --j)
@@ -612,8 +662,6 @@ public class TableRenderer : MonoBehaviour
                     this.curLastLineItemIndex = this.lineItemCount - 1;
                 else
                     this.curLastLineItemIndex--;
-                print("删除后最好一排索引" + this.curLastLineIndex);
-                print("删除后最好一排最后一个索引" + this.curLastLineItemIndex);
                 //TODO 隐藏一排内多余的item
                 itemList = this.itemLineList[this.curLastLineIndex];
                 length = itemList.Count;
@@ -638,6 +686,46 @@ public class TableRenderer : MonoBehaviour
         //左右
         this.left = -this.itemWidth - this.gapH;
         this.right = (this.itemWidth + this.gapH) * (this.showLineCount - 1);
+    }
+
+    /// <summary>
+    /// 根据索引滚动到相应位置
+    /// </summary>
+    /// <param name=index>item索引</param>
+    /// <returns></returns>
+    public void rollPosByIndex(int targetIndex)
+    {
+        if (this.itemLineList == null ||
+            this.itemLineList.Count == 0) return;
+        this.isReload = false;
+        this.sr.StopMovement();
+        if (targetIndex < 0) targetIndex = 0;
+        if (targetIndex > this.totalCount - 1) targetIndex = this.totalCount - 1;
+        Vector3 contentPos = this.contentRectTf.localPosition;
+        //根据targetIndex计算出当前排的索引
+        int targetLineIndex = Mathf.CeilToInt((float)(targetIndex + 1) / (float)lineItemCount) - 1;
+        this.curLineIndex = targetLineIndex;
+        //计算出第一个索引是多少， 因为第一个curLineIndex不一定是targetLineIndex 
+        if (targetLineIndex + this.showLineCount > this.totalLineCount)
+            this.curLineIndex -= targetLineIndex + this.showLineCount - this.totalLineCount;
+        float gap;
+        if (!this.isHorizontal)
+        {
+            gap = this.itemHeight + this.gapV;
+            this.prevItemPos.y = -gap * this.curLineIndex; //算出移动的距离
+            contentPos.y = gap * targetLineIndex;
+        }
+        else
+        {
+            gap = this.itemWidth + this.gapH;
+            this.prevItemPos.x = gap * this.curLineIndex; //算出移动的距离
+            contentPos.x = -gap * targetLineIndex;
+        }
+        this.contentRectTf.localPosition = contentPos;
+        this.layoutItem();
+        this.reloadItem(true);
+        this.fixContentPos();
+        this.isReload = true;
     }
 
     /// <summary>
