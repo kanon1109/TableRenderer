@@ -127,60 +127,27 @@ public class TableRenderer : MonoBehaviour
     /// <param name="count">需要创建item的个数</param>
     private void createItem(GameObject prefab, int createLineCount, int count)
     {
-        //createLineCount = 0 表示一行也不创建 只补全一排item
         if (createLineCount < 0) return;
         if (count <= 0) return;
         if (this.itemLineList == null)
             this.itemLineList = new List<List<GameObject>>();
-        //表示相同一排内 删除或增加 item
-        int showCreateCount = count - this.totalCount; //实际显示的数量
-        if (showCreateCount <= 0) return;
+        if (count <= this.totalCount) return;
         //没有创建过
         for (int i = 0; i < createLineCount; ++i)
         {
             this.itemLineList.Add(new List<GameObject>());
         }
-        //如果没有创建过
-        if(this.curLastLineIndex == -1)
-        {
-            this.curLastLineIndex = 0;
-            this.curLastLineItemIndex = 0;
-        }
-        List<GameObject> itemList = this.itemLineList[this.curLastLineIndex];
-        int length = itemList.Count;
-        //计算补全的数量
-        int supplementCount = length - (this.curLastLineItemIndex + 1);
-        if (supplementCount > showCreateCount) supplementCount = showCreateCount;
-        int createdCount = 0;
-
-        //找到补全的数量
-        for (int i = 0; i < supplementCount; ++i)
-        {
-            this.curLastLineItemIndex++;
-            GameObject item = itemList[this.curLastLineItemIndex];
-            item.SetActive(true);
-            createdCount++;
-        }
-
-        //判断补全后是否满一排，如果满了 curLastLineItemIndex 归零，curLastLineIndex累加
-        if (this.curLastLineItemIndex >= this.lineItemCount - 1)
-            this.curLastLineIndex++;
-
         //创建剩余的数量
         for (int i = 0; i < createLineCount; ++i)
         {
-            itemList = this.itemLineList[this.curLastLineIndex];
             this.curLastLineIndex++;
+            List<GameObject> itemList = this.itemLineList[this.curLastLineIndex];
             for (int j = 0; j < this.lineItemCount; ++j)
             {
                 GameObject item = MonoBehaviour.Instantiate(prefab, new Vector3(0, 0), new Quaternion()) as GameObject;
                 item.transform.SetParent(this.content.gameObject.transform);
                 item.transform.localScale = new Vector3(1, 1, 1);
                 itemList.Add(item);
-                createdCount++;
-                //最后一排
-                if (createdCount > showCreateCount)
-                    item.SetActive(false);
             }
         }
     }
@@ -436,6 +403,8 @@ public class TableRenderer : MonoBehaviour
         //根据显示数量创建item
         this.createItem(this.itemPrefab, createLineCount, count);
         this.totalCount = count;
+        //数量为0 上一个位置归位0
+        if (count == 0) this.prevItemPos = new Vector2();
         //更新itemIndex
         this.updateCurLineItemIndex(count);
         //更新item的显示
