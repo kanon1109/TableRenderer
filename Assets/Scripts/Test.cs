@@ -16,7 +16,7 @@ public class Test : MonoBehaviour
         this.btn.onClick.AddListener(btnHandler);
 
         this.datalist = new List<TestVo>();
-        for (int i = 0; i < 73; ++i)
+        for (int i = 0; i < 47; ++i)
         {
             TestVo tVo = new TestVo();
             tVo.name = "name" + i;
@@ -24,7 +24,7 @@ public class Test : MonoBehaviour
         }
         TableRenderer tr = this.list.GetComponent<TableRenderer>();
 
-        tr.init(true, datalist.Count, 5, 10, 10, updateTableItem);
+        tr.init(false, datalist.Count, 4, 10, 10, updateTableItem);
 	}
 
     private void btnHandler()
@@ -46,7 +46,7 @@ public class Test : MonoBehaviour
     {
         this.datalist = new List<TestVo>();
         int count = Random.Range(0, 90);
-        count = 53;
+        //count = 45;
         print("新列表数量count = " + count);
         for (int i = 1; i <= count; i++)
         {

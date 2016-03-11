@@ -4,11 +4,15 @@ using UnityEngine.UI;
 /// <summary>
 /// 无线滚动table 
 /// TODO 
+/// 已完成
 /// 【创建补全item】
 /// 【删除item时在同一排的item 判断隐藏】
-/// 上滚动时判断最后一行需要隐藏的item
-/// 下滚动时判断第一行需要显示的item
-/// 根据item的index 跳转滚动容器的位置
+/// 【上滚动时判断最后一行需要隐藏的item】
+/// 【下滚动时判断第一行需要显示的item】
+/// 【根据item的index 跳转滚动容器的位置】
+/// 【滚动至最后一排 reloadData 新增数量时 不显示增加新的item （无论content 是否大于一屏）】
+/// 【如果content内容大于一屏 滚动至最后一排后 reloadData 减少数量时 没隐藏多余的item （ curLastLineItemIndex 未更新）】
+/// 【定位后滚动没隐藏多余的item】
 /// </summary>
 public class TableRenderer : MonoBehaviour 
 {
@@ -54,9 +58,9 @@ public class TableRenderer : MonoBehaviour
     private int totalLineCount;
     //总的数据数量（虚拟数据 并非实际创建的item数量）
     private int totalCount = 0;
-    //当前最后一行的索引
+    //当前最后一行的索引(范围 0 - (showLineCount - 1))
     private int curLastLineIndex = -1;
-    //当前最后一行最后一个item位置的索引
+    //当前最后一行最后一个item位置的索引(范围 0 - (lineItemCount - 1))
     private int curLastLineItemIndex = -1;
     //底部位置
     private float bottom;
@@ -148,7 +152,8 @@ public class TableRenderer : MonoBehaviour
         int supplementCount = length - (this.curLastLineItemIndex + 1);
         if (supplementCount > showCreateCount) supplementCount = showCreateCount;
         int createdCount = 0;
-        //TODO 找到补全的数量
+
+        //找到补全的数量
         for (int i = 0; i < supplementCount; ++i)
         {
             this.curLastLineItemIndex++;
@@ -156,12 +161,12 @@ public class TableRenderer : MonoBehaviour
             item.SetActive(true);
             createdCount++;
         }
-        //TODO判断补全后是否满一排，如果满了 curLastLineItemIndex 归零，curLastLineIndex累加
+
+        //判断补全后是否满一排，如果满了 curLastLineItemIndex 归零，curLastLineIndex累加
         if (this.curLastLineItemIndex >= this.lineItemCount - 1)
             this.curLastLineIndex++;
 
-        print("this.curLastLineIndex" + this.curLastLineIndex);
-        //TODO创建剩余的数量
+        //创建剩余的数量
         for (int i = 0; i < createLineCount; ++i)
         {
             itemList = this.itemLineList[this.curLastLineIndex];
@@ -178,13 +183,6 @@ public class TableRenderer : MonoBehaviour
                     item.SetActive(false);
             }
         }
-        //TODO标记最后位置
-        this.curLastLineItemIndex = count % this.lineItemCount;
-        if (this.curLastLineItemIndex == 0) 
-            this.curLastLineItemIndex = this.lineItemCount - 1;
-        else 
-            this.curLastLineItemIndex--;
-        this.curLastLineIndex = this.itemLineList.Count - 1;
     }
 
     /// <summary>
@@ -421,6 +419,8 @@ public class TableRenderer : MonoBehaviour
         int prevShowLineCount = this.showLineCount;
         //判断当前多出来的排，并删除。
         this.removeOverItem(this.totalLineCount, count);
+        //先更新lineIndex
+        this.updateCurLineItemIndex(count);
         //纵向 计算应该显示的排数
         if (!this.isHorizontal) 
             this.showLineCount = (int)(Mathf.Ceil(this.listHeight / (this.itemHeight + this.gapV))); 
@@ -436,6 +436,13 @@ public class TableRenderer : MonoBehaviour
         //根据显示数量创建item
         this.createItem(this.itemPrefab, createLineCount, count);
         this.totalCount = count;
+        //更新itemIndex
+        this.updateCurLineItemIndex(count);
+        //更新item的显示
+        this.updateLineItemActive();
+        //防止item不显示bug
+        this.fixContentItemActive();
+        //更新滚动范围
         this.updateBorder();
         //总数更新content大小
         this.updateContentSize();
@@ -643,33 +650,6 @@ public class TableRenderer : MonoBehaviour
 			        }
                     this.itemLineList.RemoveAt(i);
                 }
-
-                //标记最后位置
-                this.curLastLineIndex = this.itemLineList.Count - 1;
-                this.curLastLineItemIndex = this.lineItemCount;
-            }
-
-            //隐藏一排内的item
-            if (totalLineCount <= this.showLineCount && 
-                count < this.totalCount && 
-                this.itemLineList.Count > 0)
-            {
-                //TODO标记最后位置
-                this.curLastLineIndex = this.itemLineList.Count - 1;
-                //最后一排item的数量
-                this.curLastLineItemIndex = count % this.lineItemCount;
-                if (this.curLastLineItemIndex == 0)
-                    this.curLastLineItemIndex = this.lineItemCount - 1;
-                else
-                    this.curLastLineItemIndex--;
-                //TODO 隐藏一排内多余的item
-                itemList = this.itemLineList[this.curLastLineIndex];
-                length = itemList.Count;
-                for (int i = this.curLastLineItemIndex + 1; i < length; i++)
-                {
-                    GameObject item = itemList[i];
-                    item.SetActive(false);
-                }
             }
         }
     }
@@ -724,8 +704,95 @@ public class TableRenderer : MonoBehaviour
         this.contentRectTf.localPosition = contentPos;
         this.layoutItem();
         this.reloadItem(true);
+        this.updateLineItemActive();
         this.fixContentPos();
         this.isReload = true;
+    }
+
+    /// <summary>
+    /// 这是一个防止设置content子对象的active时 因为content不动的情况下item还是不显示
+    /// </summary>
+    private void fixContentItemActive()
+    {
+        //奇淫技巧 防止因为 content 静止不动时 item.SetActive(true); 还是不显示的bug
+        Vector3 lp = this.contentRectTf.localPosition;
+        this.contentRectTf.localPosition = new Vector3(lp.x + .001f, lp.y + .001f);
+        this.contentRectTf.localPosition = lp;
+    }
+
+    /// <summary>
+    /// 更新item的显示状态
+    /// </summary>
+    private void updateLineItemActive()
+    {
+        if (this.itemLineList == null) return;
+        if (this.itemLineList.Count == 0) return;
+        for (int i = 0; i < this.showLineCount; i++)
+        {
+            List<GameObject> itemList = this.itemLineList[i];
+            for (int j = 0; j < this.lineItemCount; ++j)
+            {
+                GameObject item = itemList[j];
+                if (this.totalLineCount <= this.showLineCount) //排数在一屏以内
+                {
+                    if (i < this.showLineCount - 1) //前几排全部显示
+                    {
+                        item.SetActive(true);
+                    }
+                    else
+                    {
+                        if (j <= this.curLastLineItemIndex)  //最后一排判断可显示的item
+                            item.SetActive(true);
+                        else 
+                            item.SetActive(false);
+                    }
+                }
+                else //排数超过一屏
+                {
+                    //判断最后一排是否在显示范围内
+                    if (this.curLineIndex < this.totalLineCount - this.showLineCount)
+                    {
+                        item.SetActive(true);
+                    }
+                    else
+                    {
+                        if (i < this.showLineCount - 1) //前几排全部显示
+                        {
+                            item.SetActive(true);
+                        }
+                        else
+                        {
+                            if (j <= this.curLastLineItemIndex)  //最后一排判断可显示的item
+                                item.SetActive(true);
+                            else
+                                item.SetActive(false);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// 更新当前总数更新最后一排的最后一个item的索引位置
+    /// </summary>
+    /// <param name="count">当前应该显示的item总数</param>
+    private void updateCurLineItemIndex(int count)
+    {
+        if (this.itemLineList == null || 
+            this.itemLineList.Count == 0)
+        {
+            this.curLastLineIndex = -1;
+            this.curLastLineItemIndex = -1;
+            return;
+        }
+        //标记最后line的Index
+        this.curLastLineIndex = this.itemLineList.Count - 1;
+        this.curLastLineItemIndex = count % this.lineItemCount;
+        if (this.curLastLineItemIndex == 0)
+            this.curLastLineItemIndex = this.lineItemCount - 1;
+        else
+            this.curLastLineItemIndex--;
     }
 
     /// <summary>
