@@ -101,9 +101,9 @@ public class TableRenderer : MonoBehaviour
 
         Vector2 v2;
         if(!this.isHorizontal)
-            v2 = new Vector2((this.itemWidth + gapV) * lineItemCount, this.scroll.GetComponent<RectTransform>().sizeDelta.y);
+            v2 = new Vector2((this.itemWidth + gapH) * lineItemCount, this.scroll.GetComponent<RectTransform>().sizeDelta.y);
         else
-            v2 = new Vector2(this.scroll.GetComponent<RectTransform>().sizeDelta.x, (this.itemHeight + gapH) * lineItemCount);
+            v2 = new Vector2(this.scroll.GetComponent<RectTransform>().sizeDelta.x, (this.itemHeight + gapV) * lineItemCount);
 
         this.scroll.GetComponent<RectTransform>().sizeDelta = v2;
         

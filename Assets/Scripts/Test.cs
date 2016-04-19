@@ -24,7 +24,7 @@ public class Test : MonoBehaviour
         }
         TableRenderer tr = this.list.GetComponent<TableRenderer>();
 
-        tr.init(false, datalist.Count, 4, 10, 10, updateTableItem);
+        tr.init(false, datalist.Count, 4, 30, 10, updateTableItem);
 	}
 
     private void btnHandler()
@@ -46,7 +46,6 @@ public class Test : MonoBehaviour
     {
         this.datalist = new List<TestVo>();
         int count = Random.Range(0, 90);
-        if(count < 45) count = 0;
         print("新列表数量count = " + count);
         for (int i = 1; i <= count; i++)
         {
