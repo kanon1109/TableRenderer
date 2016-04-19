@@ -98,17 +98,16 @@ public class TableRenderer : MonoBehaviour
         this.listHeight = this.scroll.GetComponent<RectTransform>().sizeDelta.y;
         this.itemWidth = this.itemPrefab.GetComponent<RectTransform>().sizeDelta.x;
         this.itemHeight = this.itemPrefab.GetComponent<RectTransform>().sizeDelta.y;
-
+        //设置外部遮罩容器的大小
         Vector2 v2;
         if(!this.isHorizontal)
             v2 = new Vector2((this.itemWidth + gapH) * lineItemCount, this.scroll.GetComponent<RectTransform>().sizeDelta.y);
         else
             v2 = new Vector2(this.scroll.GetComponent<RectTransform>().sizeDelta.x, (this.itemHeight + gapV) * lineItemCount);
-
         this.scroll.GetComponent<RectTransform>().sizeDelta = v2;
-        
+        //设置滚动内容的大小
         this.contentRectTf = this.content.GetComponent<RectTransform>();
-        this.contentRectTf.sizeDelta = new Vector2(listWidth, listHeight);
+        this.contentRectTf.sizeDelta = v2;
         this.content.transform.localPosition = new Vector3(0, 0);
         this.prevItemPos = new Vector2();
         this.contentStartPos = this.scroll.transform.localPosition;
@@ -177,8 +176,8 @@ public class TableRenderer : MonoBehaviour
                     //如果第一个位置超过顶部范围，并且不是滚动到最后一个，则重新设置位置。 
                     if (this.itemLineList.Count > 1)
                     {
-                        this.itemLineList.RemoveAt(i);
                         List<GameObject> lastItemList = this.itemLineList[this.itemLineList.Count - 1];
+                        this.itemLineList.RemoveAt(i);
                         GameObject lastItem = lastItemList[0];
                         Transform lastItemTf = lastItem.transform;
                         for (int j = 0; j < itemListLength; j++)
@@ -220,8 +219,8 @@ public class TableRenderer : MonoBehaviour
                     //如果底部位置超过范围,并且不是滚动到第一个位置，则重新设置位置。
                     if (this.itemLineList.Count > 1)
                     {
-                        this.itemLineList.RemoveAt(i);
                         List<GameObject> firstItemList = this.itemLineList[0];
+                        this.itemLineList.RemoveAt(i);
                         GameObject firstItem = firstItemList[0];
                         Transform firstItemTf = firstItem.transform;
                         for (int j = 0; j < itemListLength; j++)
@@ -262,8 +261,8 @@ public class TableRenderer : MonoBehaviour
                     //如果第一个位置超过顶部范围，并且不是滚动到最后一个，则重新设置位置。
                     if (this.itemLineList.Count > 1)
                     {
-                        this.itemLineList.RemoveAt(i);
                         List<GameObject> lastItemList = this.itemLineList[this.itemLineList.Count - 1];
+                        this.itemLineList.RemoveAt(i);
                         GameObject lastItem = lastItemList[0];
                         Transform lastItemTf = lastItem.transform;
                         for (int j = 0; j < itemListLength; j++)
@@ -305,8 +304,8 @@ public class TableRenderer : MonoBehaviour
                     //如果底部位置超过范围,并且不是滚动到第一个位置，则重新设置位置。
                     if (this.itemLineList.Count > 1)
                     {
-                        this.itemLineList.RemoveAt(i);
                         List<GameObject> firstItemList = this.itemLineList[0];
+                        this.itemLineList.RemoveAt(i);
                         GameObject firstItem = firstItemList[0];
                         Transform firstItemTf = firstItem.transform;
                         for (int j = 0; j < itemListLength; j++)
