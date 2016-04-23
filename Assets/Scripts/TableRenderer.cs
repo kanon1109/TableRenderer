@@ -204,6 +204,7 @@ public class TableRenderer : MonoBehaviour
                             Transform curLineItemTf = curLineItem.transform;
                             curLineItemTf.localPosition = new Vector3(curLineItemTf.localPosition.x,
                                                                       -this.itemHeight - this.gapV);
+                            //隐藏最后一排缺少的item
                             if (this.curLineIndex == this.totalLineCount - this.showLineCount - 1 && 
                                 j > this.curLastLineItemIndex)
                                 curLineItem.SetActive(false);
@@ -371,20 +372,27 @@ public class TableRenderer : MonoBehaviour
             //获取溢出数量
             int overLineCount = curLastLineIndex - lastLineIndex;
             this.curLineIndex -= overLineCount;
-            //补全位置
-            if (!isHorizontal)
-                this.prevItemPos.y += (this.itemHeight + this.gapV) * overLineCount;
-            else
-                this.prevItemPos.x -= (this.itemWidth + this.gapH) * overLineCount;
             //防止去除溢出后 索引为负数。
             if (this.curLineIndex < 0) this.curLineIndex = 0;
+            if (this.curLineIndex == 0)
+            {
+
+            }
+            else
+            {
+                //补全位置
+                if (!isHorizontal)
+                    this.prevItemPos.y += (this.itemHeight + this.gapV) * overLineCount;
+                else
+                    this.prevItemPos.x -= (this.itemWidth + this.gapH) * overLineCount;
+            }
         }
         //总的行数或者列数
         this.totalLineCount = Mathf.CeilToInt((float)count / (float)lineItemCount);
         //保存上一次显示的数量
         int prevShowLineCount = this.showLineCount;
         //判断当前多出来的排，并删除。
-        this.removeOverItem(this.totalLineCount, count);
+        this.removeOverItem(this.totalLineCount);
         //先更新lineIndex
         this.updateCurLineItemIndex(count);
         //纵向 计算应该显示的排数
@@ -592,7 +600,7 @@ public class TableRenderer : MonoBehaviour
     /// <param name="totalLineCount">当前应该显示的总排数</param>
     /// <param name="count">当前应该显示的数量</param>
     /// <returns></returns>
-    private void removeOverItem(int totalLineCount, int count)
+    private void removeOverItem(int totalLineCount)
     {
         if (this.itemLineList != null &&
             this.itemLineList.Count > 0)
@@ -602,6 +610,7 @@ public class TableRenderer : MonoBehaviour
             //删除多余的排
             if (totalLineCount < this.showLineCount)
             {
+                //从当前显示的最后一个开始往前遍历到当前总行数
                 //删除 this.showCount - count 个 item
                 for (int i = this.showLineCount - 1; i >= totalLineCount; --i)
                 {
