@@ -376,7 +376,7 @@ public class TableRenderer : MonoBehaviour
             if (this.curLineIndex < 0) this.curLineIndex = 0;
             if (this.curLineIndex == 0)
             {
-
+                this.prevItemPos = new Vector2();
             }
             else
             {
